@@ -36,7 +36,7 @@ find . -name "en.md" -type f | while read -r en_file; do
     content=$(cat "$source_file")
 
     # Generate TL;DR using Claude
-    tldr=$(claude -p "Read this article and write a very brief TL;DR summary (2-3 sentences max). Output ONLY the summary text, no 'TL;DR:' prefix, no markdown formatting, no explanations:" <<< "$content")
+    tldr=$(claude -p "Read this article and write a very brief TL;DR summary (2-3 sentences max). Write in first person perspective, as if you are the author. Output ONLY the summary text, no 'TL;DR:' prefix, no markdown formatting, no explanations:" <<< "$content")
 
     # Write file with TL;DR section after the title
     # Extract the first line (title) and the rest of the content
