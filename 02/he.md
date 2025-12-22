@@ -21,6 +21,6 @@
 
 ---
 
-- [ערוץ WhatsApp של ZoomOut](https://whatsapp.com/channel/0029Vb7ZXok5kg7Di82iSt1S)
-- [קובץ מקור](https://github.com/tupe12334/whatsapp-channel/blob/main/02/en.md)
-- תורגם מאנגלית לעברית באמצעות Claude Code
+- [ZoomOut WhatsApp Channel](https://whatsapp.com/channel/0029Vb7ZXok5kg7Di82iSt1S)
+- [Source file](https://github.com/tupe12334/whatsapp-channel/blob/main/02/en.md)
+- Translated from English to Hebrew using Claude Code
