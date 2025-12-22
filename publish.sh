@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Publish script: Translate missing files and add requirements footer
+# Publish script: Process and translate markdown files with footers
 
 set -e
 
@@ -18,8 +18,8 @@ echo "=== Step 3: Translating missing he.md files ==="
 "$SCRIPT_DIR/scripts/translate-missing.sh"
 
 echo ""
-echo "=== Step 4: Adding requirements footer ==="
-"$SCRIPT_DIR/scripts/add-requirements.sh"
+echo "=== Step 4: Generating footers ==="
+"$SCRIPT_DIR/scripts/footer-generation.sh"
 
 echo ""
 echo "=== Step 5: Converting Hebrew markdown to WhatsApp format ==="

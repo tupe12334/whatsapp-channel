@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Add requirements footer to en.md (creates en.published.md) and he.md files
+# Generate footers for en.md (creates en.published.md) and he.md files
 
 WHATSAPP_LINK="https://whatsapp.com/channel/0029Vb7ZXok5kg7Di82iSt1S"
 REPO_BASE="https://github.com/tupe12334/whatsapp-channel/blob/main"
