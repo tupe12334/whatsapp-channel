@@ -6,14 +6,17 @@ WHATSAPP_LINK="https://whatsapp.com/channel/0029Vb7ZXok5kg7Di82iSt1S"
 REPO_BASE="https://github.com/tupe12334/whatsapp-channel/blob/main"
 
 # Process en.md files - create en.published.md instead of mutating
-# Prefers en.typos-fixed.md (with typo corrections) over en.md if available
+# Priority: en.with-tldr.md > en.typos-fixed.md > en.md
 find . -type f -name "en.md" | while read -r file; do
     dir=$(dirname "$file")
     published_file="$dir/en.published.md"
+    tldr_file="$dir/en.with-tldr.md"
     fixed_file="$dir/en.typos-fixed.md"
 
-    # Prefer en.typos-fixed.md if it exists, otherwise use en.md
-    if [ -f "$fixed_file" ]; then
+    # Priority: en.with-tldr.md > en.typos-fixed.md > en.md
+    if [ -f "$tldr_file" ]; then
+        source_file="$tldr_file"
+    elif [ -f "$fixed_file" ]; then
         source_file="$fixed_file"
     else
         source_file="$file"
@@ -46,7 +49,7 @@ find . -type f -name "en.md" | while read -r file; do
 
 - [ZoomOut WhatsApp Channel]($WHATSAPP_LINK)
 - [Source file]($REPO_BASE/$rel_path)
-- Translated from English to Hebrew using Claude Code
+- TL;DR generated and translated from English to Hebrew using Claude Code
 EOF
 done
 
@@ -71,7 +74,7 @@ find . -type f -name "he.md" | while read -r file; do
 
 - [ערוץ ZoomOut WhatsApp]($WHATSAPP_LINK)
 - [קובץ המקור]($REPO_BASE/$rel_path)
-- תורגם באמצעות Claude Code
+- סיכום (TL;DR) נוצר ותורגם מאנגלית לעברית באמצעות Claude Code
 EOF
 done
 
