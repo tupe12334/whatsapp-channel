@@ -2,15 +2,6 @@
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
   "version": "0.2",
   "language": "en,he",
-  "words": [
-    "WhatsApp",
-    "ZoomOut",
-    "ChatGPT",
-    "tupe12334",
-    "Claud"
-  ],
-  "ignorePaths": [
-    "node_modules",
-    ".git"
-  ]
+  "words": ["Centy", "ChatGPT", "Claud", "tupe12334", "WhatsApp", "ZoomOut"],
+  "ignorePaths": ["node_modules", ".git"]
 }
