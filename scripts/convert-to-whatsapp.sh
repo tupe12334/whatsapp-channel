@@ -11,7 +11,7 @@ find "$PROJECT_ROOT" -name "he.md" -type f | while read -r md_file; do
     txt_file="$dir/he.txt"
 
     echo "Converting: $md_file -> $txt_file"
-    pnpm dlx md-to-whatsapp < "$md_file" > "$txt_file"
+    pnpm dlx md-to-whatsapp "$md_file" > "$txt_file"
 done
 
 echo "Done converting Hebrew markdown files to WhatsApp format."
