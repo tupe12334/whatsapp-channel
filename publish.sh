@@ -14,4 +14,8 @@ echo "=== Step 2: Translating missing he.md files ==="
 "$SCRIPT_DIR/scripts/translate-missing.sh"
 
 echo ""
+echo "=== Step 3: Converting Hebrew markdown to WhatsApp format ==="
+"$SCRIPT_DIR/scripts/convert-to-whatsapp.sh"
+
+echo ""
 echo "=== Done! ==="
