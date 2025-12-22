@@ -9,8 +9,9 @@ The he.md will be auto translated to Hebrew using Claude Code.
 
 ## Requirements
 
-In the end of every message there will be:
+Every message will include:
 
-- Link the the whatsapp channel
+- A TL;DR summary at the top (auto-generated using Claude Code)
+- Link to the WhatsApp channel
 - Link to the file in the repository
-- Description of any AI usage in the message if applicable
+- Description of AI usage in the message
