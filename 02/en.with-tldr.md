@@ -20,9 +20,3 @@ The tool discussed can be found here:
 
 - https://www.npmjs.com/package/md-to-whatsapp
 - https://www.npmjs.com/package/centy
-
----
-
-- [ZoomOut WhatsApp Channel](https://whatsapp.com/channel/0029Vb7ZXok5kg7Di82iSt1S)
-- [Source file](https://github.com/tupe12334/whatsapp-channel/blob/main/02/en.md)
-- TL;DR generated and translated from English to Hebrew using Claude Code
