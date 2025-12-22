@@ -14,12 +14,12 @@ echo "=== Step 2: Adding TL;DR summaries ==="
 "$SCRIPT_DIR/scripts/add-tldr.sh"
 
 echo ""
-echo "=== Step 3: Adding requirements footer ==="
-"$SCRIPT_DIR/scripts/add-requirements.sh"
+echo "=== Step 3: Translating missing he.md files ==="
+"$SCRIPT_DIR/scripts/translate-missing.sh"
 
 echo ""
-echo "=== Step 4: Translating missing he.md files ==="
-"$SCRIPT_DIR/scripts/translate-missing.sh"
+echo "=== Step 4: Adding requirements footer ==="
+"$SCRIPT_DIR/scripts/add-requirements.sh"
 
 echo ""
 echo "=== Step 5: Converting Hebrew markdown to WhatsApp format ==="
