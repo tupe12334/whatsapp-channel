@@ -10,6 +10,12 @@ find "$PROJECT_ROOT" -name "he.md" -type f | while read -r md_file; do
     dir=$(dirname "$md_file")
     txt_file="$dir/he.txt"
 
+    # Check if txt file needs to be (re)generated
+    if [ -f "$txt_file" ] && [ "$txt_file" -nt "$md_file" ]; then
+        echo "Skipping: $txt_file is up to date"
+        continue
+    fi
+
     echo "Converting: $md_file -> $txt_file"
     pnpm dlx md-to-whatsapp "$md_file" > "$txt_file"
 done
