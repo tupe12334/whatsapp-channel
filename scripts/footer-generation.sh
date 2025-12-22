@@ -72,9 +72,9 @@ find . -type f -name "he.md" | while read -r file; do
 
 ---
 
-- [ערוץ ZoomOut WhatsApp]($WHATSAPP_LINK)
-- [קובץ המקור]($REPO_BASE/$rel_path)
-- סיכום (TL;DR) נוצר ותורגם מאנגלית לעברית באמצעות Claude Code
+- [ZoomOut WhatsApp Channel]($WHATSAPP_LINK)
+- [Source file]($REPO_BASE/$rel_path)
+- TL;DR generated and translated from English to Hebrew using Claude Code
 EOF
 done
 
