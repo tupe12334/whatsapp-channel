@@ -152,7 +152,7 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
       <div class="flex gap-2 md:gap-3 mb-4 md:mb-6 text-xxs md:text-xs overflow-x-auto pb-2 -mx-3 px-3 md:mx-0 md:px-0">
         <div class="flex items-center gap-1 shrink-0"><div class="w-2.5 h-2.5 md:w-3 md:h-3 bg-green-500 rounded"></div><span class="text-slate-400">JavaScript</span></div>
         <div class="flex items-center gap-1 shrink-0"><div class="w-2.5 h-2.5 md:w-3 md:h-3 bg-yellow-500 rounded"></div><span class="text-slate-400">Node.js</span></div>
-        <div class="flex items-center gap-1 shrink-0"><div class="w-2.5 h-2.5 md:w-3 md:h-3 bg-orange-500 rounded"></div><span class="text-slate-400">libuv</span></div>
+        <div class="flex items-center gap-1 shrink-0"><div class="w-2.5 h-2.5 md:w-3 md:h-3 bg-orange-500 rounded"></div><span class="tooltip-trigger text-slate-400" data-tooltip="<strong>libuv</strong><br><br>Cross-platform async I/O library. Provides event loop, file system operations, networking, and more. The backbone of Node.js async operations.">libuv</span></div>
         <div class="flex items-center gap-1 shrink-0"><div class="w-2.5 h-2.5 md:w-3 md:h-3 bg-purple-500 rounded"></div><span class="text-slate-400">Kernel</span></div>
         <div class="flex items-center gap-1 shrink-0"><div class="w-2.5 h-2.5 md:w-3 md:h-3 bg-cyan-500 rounded"></div><span class="text-slate-400">FS</span></div>
         <div class="flex items-center gap-1 shrink-0"><div class="w-2.5 h-2.5 md:w-3 md:h-3 bg-emerald-500 rounded"></div><span class="text-slate-400">Return</span></div>
@@ -186,7 +186,7 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
           <div class="bg-green-900/30 rounded p-2 md:p-3 border border-green-800 text-xs md:text-sm">
             <div class="font-bold text-green-400 mb-1.5">What happens:</div>
             <div class="space-y-1 text-slate-300">
-              <div>1. V8 parses your JavaScript code</div>
+              <div>1. <span class="tooltip-trigger text-green-400" data-tooltip="<strong>V8</strong> is Google's open-source JavaScript engine written in C++. Used in Chrome and Node.js. Compiles JS to machine code using JIT compilation.">V8</span> parses your JavaScript code</div>
               <div>2. <code class="text-green-300 text-xs">fs.openSync</code> is a native binding</div>
               <div>3. V8 looks up the C++ function</div>
               <div>4. Arguments converted: JS → C++ types</div>
@@ -235,7 +235,7 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
             <div class="text-slate-500">// node_file.cc</div>
             <div><span class="text-blue-400">int</span> flags = <span class="tooltip-trigger text-cyan-400" data-tooltip="<strong>StringToFlags</strong> converts:<br>'r' → O_RDONLY<br>'r+' → O_RDWR<br>'w' → O_WRONLY | O_CREAT">StringToFlags</span>(<span class="text-green-400">'r+'</span>);</div>
             <div class="text-slate-500">// flags = O_RDWR (2)</div>
-            <div><span class="text-yellow-400">uv_fs_open</span>(loop, req, path, flags);</div>
+            <div><span class="tooltip-trigger text-yellow-400" data-tooltip="<strong>uv_fs_open()</strong> is libuv's file open function.<br><br>Parameters:<br>• loop: event loop<br>• req: request handle<br>• path: file path<br>• flags: O_RDWR, etc.">uv_fs_open</span>(loop, req, path, flags);</div>
           </div>
 
           <div class="bg-yellow-900/30 rounded p-2 md:p-3 border border-yellow-800 text-xs md:text-sm">
@@ -287,8 +287,8 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
           </div>
 
           <div class="code-block bg-slate-900 rounded p-2 md:p-3 text-xs font-mono mb-3">
-            <div class="text-slate-500">// glibc wrapper</div>
-            <div><span class="text-blue-400">return</span> <span class="text-cyan-400">syscall</span>(<span class="text-purple-400">SYS_openat</span>,</div>
+            <div class="text-slate-500">// <span class="tooltip-trigger text-slate-400" data-tooltip="<strong>glibc</strong> (GNU C Library) is the standard C library on Linux.<br><br>Provides wrappers around syscalls, making them easier to use from C/C++ code.">glibc</span> wrapper</div>
+            <div><span class="text-blue-400">return</span> <span class="tooltip-trigger text-cyan-400" data-tooltip="<strong>syscall()</strong> is a glibc function that invokes a system call directly.<br><br>Takes the syscall number as first argument, followed by the syscall's arguments.">syscall</span>(<span class="tooltip-trigger text-purple-400" data-tooltip="<strong>SYS_openat</strong> = 257<br><br>The syscall number for openat(). Each syscall has a unique number defined in the kernel.">SYS_openat</span>,</div>
             <div class="pl-3"><span class="tooltip-trigger text-purple-400" data-tooltip="<strong>AT_FDCWD</strong> (-100) means 'relative to current directory'. Modern Linux uses openat() not open().">AT_FDCWD</span>, path, flags);</div>
           </div>
 
@@ -296,8 +296,8 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
             <div class="font-bold text-orange-400 mb-1.5">What happens:</div>
             <div class="space-y-1 text-slate-300">
               <div>1. glibc wraps syscall</div>
-              <div>2. Loads syscall # (257) into RAX</div>
-              <div>3. Args into: RDI, RSI, RDX, R10</div>
+              <div>2. Loads syscall # (257) into <span class="tooltip-trigger text-orange-400" data-tooltip="<strong>RAX</strong> = 64-bit accumulator register.<br><br>Used for syscall numbers and return values. After syscall, RAX contains the result (fd or error code).">RAX</span></div>
+              <div>3. Args into: <span class="tooltip-trigger text-orange-400" data-tooltip="<strong>RDI</strong> = 1st syscall argument<br><br>For openat(): directory fd (AT_FDCWD = -100)">RDI</span>, <span class="tooltip-trigger text-orange-400" data-tooltip="<strong>RSI</strong> = 2nd syscall argument<br><br>For openat(): pointer to pathname string">RSI</span>, <span class="tooltip-trigger text-orange-400" data-tooltip="<strong>RDX</strong> = 3rd syscall argument<br><br>For openat(): flags (O_RDWR, etc.)">RDX</span>, <span class="tooltip-trigger text-orange-400" data-tooltip="<strong>R10</strong> = 4th syscall argument<br><br>For openat(): mode (file permissions if creating)">R10</span></div>
               <div>4. Executes <code class="text-orange-300 text-xs">syscall</code> instruction</div>
             </div>
           </div>
@@ -312,9 +312,9 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
 
           <div class="code-block bg-slate-900 rounded p-2 md:p-3 text-xs font-mono mb-3">
             <div class="text-slate-500">; x86_64 assembly</div>
-            <div><span class="text-purple-400">mov</span> rax, <span class="text-orange-400">257</span>  <span class="text-slate-500">; SYS_openat</span></div>
-            <div><span class="text-purple-400">mov</span> rdi, <span class="text-orange-400">-100</span> <span class="text-slate-500">; AT_FDCWD</span></div>
-            <div class="text-yellow-400 font-bold">syscall       <span class="text-slate-400">; → Kernel!</span></div>
+            <div><span class="text-purple-400">mov</span> <span class="tooltip-trigger text-cyan-400" data-tooltip="<strong>rax</strong> = syscall number register<br><br>257 = SYS_openat. The kernel uses this to look up which syscall handler to run.">rax</span>, <span class="text-orange-400">257</span>  <span class="text-slate-500">; SYS_openat</span></div>
+            <div><span class="text-purple-400">mov</span> <span class="tooltip-trigger text-cyan-400" data-tooltip="<strong>rdi</strong> = 1st argument register<br><br>-100 = AT_FDCWD (current working directory). This is the directory fd for relative paths.">rdi</span>, <span class="text-orange-400">-100</span> <span class="text-slate-500">; AT_FDCWD</span></div>
+            <div class="text-yellow-400 font-bold"><span class="tooltip-trigger" data-tooltip="<strong>syscall</strong> instruction<br><br>CPU instruction that triggers a transition from user mode (Ring 3) to kernel mode (Ring 0). Fast and secure way to request kernel services.">syscall</span>       <span class="text-slate-400">; → Kernel!</span></div>
           </div>
 
           <div class="bg-orange-900/30 rounded p-2 md:p-3 border border-orange-800 text-xs md:text-sm">
@@ -322,7 +322,7 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
             <div class="space-y-1 text-slate-300">
               <div>1. CPU reads syscall instruction</div>
               <div>2. <span class="tooltip-trigger text-orange-400" data-tooltip="<strong>Ring 3 → Ring 0:</strong> User mode (limited) → Kernel mode (full access). This is the ONLY safe way to enter kernel.">Ring 3 → Ring 0</span> privilege change</div>
-              <div>3. Saves RIP, RFLAGS</div>
+              <div>3. Saves <span class="tooltip-trigger text-orange-400" data-tooltip="<strong>RIP</strong> = Instruction Pointer<br><br>Points to the next instruction to execute. Saved so kernel knows where to return after syscall.">RIP</span>, <span class="tooltip-trigger text-orange-400" data-tooltip="<strong>RFLAGS</strong> = CPU flags register<br><br>Contains status flags (zero, carry, overflow) and control flags. Saved/restored across syscall boundary.">RFLAGS</span></div>
               <div>4. Jumps to kernel entry point</div>
             </div>
           </div>
@@ -345,7 +345,7 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
           <div class="code-block bg-slate-900 rounded p-2 md:p-3 text-xs font-mono mb-3">
             <div class="text-slate-500">// entry_SYSCALL_64:</div>
             <div><span class="tooltip-trigger text-purple-400" data-tooltip="<strong>SWAPGS</strong> switches GS register to kernel value, giving access to per-CPU data structures.">swapgs</span></div>
-            <div>mov rsp, kernel_stack</div>
+            <div>mov <span class="tooltip-trigger text-cyan-400" data-tooltip="<strong>rsp</strong> = Stack Pointer<br><br>Points to the top of the stack. Switched from user stack to kernel stack for security and isolation.">rsp</span>, kernel_stack</div>
             <div>call sys_call_table[<span class="text-orange-400">257</span>]</div>
           </div>
 
@@ -355,7 +355,7 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
               <div>1. SWAPGS → kernel per-CPU data</div>
               <div>2. Switch to <span class="tooltip-trigger text-purple-400" data-tooltip="Each process has its own 16KB kernel stack. Separate from user stack for security.">kernel stack</span></div>
               <div>3. Save all user registers</div>
-              <div>4. Lookup & call do_sys_openat2()</div>
+              <div>4. Lookup & call <span class="tooltip-trigger text-purple-400" data-tooltip="<strong>do_sys_openat2()</strong><br><br>The kernel's main file-opening function. Handles path resolution, permission checks, and file descriptor allocation.">do_sys_openat2()</span></div>
             </div>
           </div>
         </div>
@@ -477,10 +477,10 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
 
           <div class="code-block bg-slate-900 rounded p-2 md:p-3 text-xs font-mono mb-3">
             <div class="text-slate-500">// <span class="tooltip-trigger text-cyan-400" data-tooltip="<strong>struct file</strong> = Open File Description. Created per open() call. Tracks position and mode.">Open File Description</span></div>
-            <div>f_pos: <span class="text-orange-400">0</span> <span class="text-slate-500">(offset)</span></div>
+            <div><span class="tooltip-trigger text-cyan-400" data-tooltip="<strong>f_pos</strong> = file position (offset)<br><br>Current read/write position in the file. Updated by read(), write(), lseek(). Starts at 0 for new opens.">f_pos</span>: <span class="text-orange-400">0</span> <span class="text-slate-500">(offset)</span></div>
             <div>f_flags: <span class="tooltip-trigger text-orange-400" data-tooltip="<strong>O_RDWR</strong> (value: 2)<br>Open for reading and writing.<br><br>Stored in struct file to track how the file was opened. Used by read/write syscalls to check permissions.">O_RDWR</span></div>
-            <div>f_inode: <span class="text-purple-400">→ #48291</span></div>
-            <div>f_count: <span class="text-orange-400">1</span></div>
+            <div><span class="tooltip-trigger text-cyan-400" data-tooltip="<strong>f_inode</strong> = pointer to inode<br><br>Links this open file to its inode (metadata). Multiple file descriptors can point to the same inode.">f_inode</span>: <span class="text-purple-400">→ #48291</span></div>
+            <div><span class="tooltip-trigger text-cyan-400" data-tooltip="<strong>f_count</strong> = reference count<br><br>Number of file descriptors pointing to this struct file. Incremented by dup()/fork(). File is closed when count reaches 0.">f_count</span>: <span class="text-orange-400">1</span></div>
           </div>
 
           <div class="bg-cyan-900/30 rounded p-2 md:p-3 border border-cyan-800 text-xs md:text-sm">
@@ -535,13 +535,13 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
           </div>
 
           <div class="code-block bg-slate-900 rounded p-2 md:p-3 text-xs font-mono mb-3 space-y-0.5">
-            <div><span class="text-purple-400">Kernel</span>: RAX = 3</div>
+            <div><span class="text-purple-400">Kernel</span>: <span class="tooltip-trigger text-emerald-400" data-tooltip="<strong>RAX</strong> = return value register<br><br>After syscall completes, the kernel places the result in RAX. Positive = success (fd), negative = error code.">RAX</span> = 3</div>
             <div class="pl-2 text-slate-500">↓ <span class="tooltip-trigger text-emerald-400" data-tooltip="<strong>SYSRET</strong> restores user registers and returns to Ring 3. Your code resumes right after syscall.">SYSRET</span></div>
-            <div><span class="text-orange-400">glibc</span>: return 3</div>
+            <div><span class="tooltip-trigger text-orange-400" data-tooltip="<strong>glibc</strong><br><br>The C library checks RAX. If negative, it sets errno and returns -1. If positive, it returns the value directly.">glibc</span>: return 3</div>
             <div class="pl-2 text-slate-500">↓</div>
-            <div><span class="text-orange-400">libuv</span>: req→result = 3</div>
+            <div><span class="tooltip-trigger text-orange-400" data-tooltip="<strong>libuv</strong><br><br>Stores the result in the request structure. For sync calls, this is returned immediately. For async, it's passed to the callback.">libuv</span>: req→result = 3</div>
             <div class="pl-2 text-slate-500">↓</div>
-            <div><span class="text-yellow-400">Node.js</span>: v8::Integer(3)</div>
+            <div><span class="text-yellow-400">Node.js</span>: <span class="tooltip-trigger text-yellow-400" data-tooltip="<strong>v8::Integer</strong><br><br>V8's C++ representation of a JavaScript number. Created from the C int and returned to JavaScript as a Number.">v8::Integer</span>(3)</div>
             <div class="pl-2 text-slate-500">↓</div>
             <div class="bg-green-900/40 p-1.5 rounded mt-1">
               <span class="text-green-400">JS</span>: <span class="text-purple-400">const</span> fd = <span class="text-orange-400 font-bold">3</span>;
