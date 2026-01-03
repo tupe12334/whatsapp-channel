@@ -770,13 +770,34 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
       }
 
       // Tooltip system - works for both touch and mouse
-      function showTooltip(element, html) {
-        hideTooltip();
+      let hideTimeout = null;
+      let isHoveringTooltip = false;
+      let isTouchInteraction = false;
+
+      function showTooltip(element, html, fromTouch = false) {
+        // Clear any pending hide
+        if (hideTimeout) {
+          clearTimeout(hideTimeout);
+          hideTimeout = null;
+        }
+
+        // Track if this was triggered by touch
+        isTouchInteraction = fromTouch;
+
+        // If showing a different tooltip, hide the current one first
+        if (activeTooltip && activeTooltip !== element) {
+          tooltipContainer.classList.remove('show');
+          tooltipOverlay.classList.remove('show');
+        }
 
         const rect = element.getBoundingClientRect();
         tooltipContainer.innerHTML = html;
         tooltipContainer.classList.add('show');
-        tooltipOverlay.classList.add('show');
+
+        // Only show overlay for touch interactions (mobile)
+        if (fromTouch) {
+          tooltipOverlay.classList.add('show');
+        }
 
         // Position tooltip
         const tooltipRect = tooltipContainer.getBoundingClientRect();
@@ -804,7 +825,39 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
         tooltipContainer.classList.remove('show');
         tooltipOverlay.classList.remove('show');
         activeTooltip = null;
+        isHoveringTooltip = false;
       }
+
+      function scheduleHideTooltip() {
+        // Don't hide if mouse is over the tooltip
+        if (isHoveringTooltip) return;
+
+        // Clear any existing timeout
+        if (hideTimeout) {
+          clearTimeout(hideTimeout);
+        }
+
+        // Delay hide to allow mouse to move to tooltip
+        hideTimeout = setTimeout(() => {
+          if (!isHoveringTooltip) {
+            hideTooltip();
+          }
+        }, 100);
+      }
+
+      // Tooltip container hover events (for desktop)
+      tooltipContainer.addEventListener('mouseenter', () => {
+        isHoveringTooltip = true;
+        if (hideTimeout) {
+          clearTimeout(hideTimeout);
+          hideTimeout = null;
+        }
+      });
+
+      tooltipContainer.addEventListener('mouseleave', () => {
+        isHoveringTooltip = false;
+        scheduleHideTooltip();
+      });
 
       // Event listeners for tooltips
       document.querySelectorAll('.tooltip-trigger').forEach(trigger => {
@@ -816,7 +869,7 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
           if (activeTooltip === trigger) {
             hideTooltip();
           } else {
-            showTooltip(trigger, tooltipHtml);
+            showTooltip(trigger, tooltipHtml, true); // fromTouch = true
           }
         }, { passive: false });
 
@@ -826,7 +879,7 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
         });
 
         trigger.addEventListener('mouseleave', () => {
-          hideTooltip();
+          scheduleHideTooltip();
         });
       });
 
