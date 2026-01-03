@@ -48,6 +48,33 @@
         background: #cbd5e1;
         border-radius: 2px;
       }
+      /* Tooltip styles */
+      .tooltip-container {
+        position: relative;
+        cursor: help;
+        border-bottom: 1px dashed #10b981;
+      }
+      .tooltip-container .tooltip {
+        visibility: hidden;
+        opacity: 0;
+        position: fixed;
+        background-color: #1e293b;
+        color: #f1f5f9;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 11px;
+        width: 220px;
+        text-align: left;
+        z-index: 1000;
+        transition: opacity 0.2s, visibility 0.2s;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        line-height: 1.4;
+        pointer-events: none;
+      }
+      .tooltip-container:hover .tooltip {
+        visibility: visible;
+        opacity: 1;
+      }
     </style>
   </head>
   <body
@@ -203,7 +230,7 @@
               <div
                 class="p-2 bg-emerald-50 border border-emerald-100 rounded text-[10px] text-emerald-800 font-mono"
               >
-                inode: 8821 (file.txt)
+                <span class="tooltip-container">inode<span class="tooltip">An <strong>inode</strong> (index node) is a data structure in Unix-like file systems that stores metadata about a file or directory, such as permissions, ownership, timestamps, and pointers to the actual data blocks on disk. Each file has a unique inode number.</span></span>: 8821 (file.txt)
                 <br />size: 4096B
               </div>
             </div>
@@ -752,6 +779,16 @@
 
       // Init
       window.addEventListener("resize", updateLines);
+
+      // Tooltip positioning
+      document.querySelectorAll('.tooltip-container').forEach(container => {
+        const tooltip = container.querySelector('.tooltip');
+        container.addEventListener('mouseenter', (e) => {
+          const rect = container.getBoundingClientRect();
+          tooltip.style.left = rect.left + 'px';
+          tooltip.style.top = (rect.bottom + 8) + 'px';
+        });
+      });
     </script>
   </body>
 </html>

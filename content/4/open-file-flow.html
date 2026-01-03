@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Node.js fs.openSync() - Complete System Flow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .step-card {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .step-card.active {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+      }
+      .step-card.completed {
+        opacity: 0.6;
+      }
+      .flow-line {
+        stroke-dasharray: 8;
+        animation: flowDash 1s linear infinite;
+      }
+      @keyframes flowDash {
+        to {
+          stroke-dashoffset: -16;
+        }
+      }
+      @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
+        50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+      }
+      .pulse-glow {
+        animation: pulse-glow 1.5s ease-in-out infinite;
+      }
+      .packet {
+        position: fixed;
+        padding: 4px 8px;
+        font-family: monospace;
+        font-size: 11px;
+        font-weight: bold;
+        color: white;
+        border-radius: 4px;
+        z-index: 100;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      .tooltip-container {
+        position: relative;
+        cursor: help;
+        border-bottom: 1px dashed currentColor;
+      }
+      .tooltip-container .tooltip {
+        visibility: hidden;
+        opacity: 0;
+        position: fixed;
+        background-color: #1e293b;
+        color: #f1f5f9;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 11px;
+        width: 240px;
+        text-align: left;
+        z-index: 1000;
+        transition: opacity 0.2s, visibility 0.2s;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        line-height: 1.4;
+        pointer-events: none;
+      }
+      .tooltip-container:hover .tooltip {
+        visibility: visible;
+        opacity: 1;
+      }
+      .code-highlight {
+        background: linear-gradient(90deg, rgba(251, 191, 36, 0.3) 0%, transparent 100%);
+      }
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body class="bg-slate-900 text-slate-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto">
+        <h1 class="text-2xl font-bold flex items-center gap-3">
+          <span class="bg-green-600 px-3 py-1 rounded text-sm font-mono">fs.openSync()</span>
+          Node.js File Opening - Complete System Flow
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">
+          From JavaScript to Kernel: what really happens when Node.js opens a file
+        </p>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto p-6">
+      <!-- Code Display -->
+      <div class="bg-slate-800 rounded-xl p-4 mb-6 border border-slate-700">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-3 h-3 rounded-full bg-red-500"></div>
+          <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+          <div class="w-3 h-3 rounded-full bg-green-500"></div>
+          <span class="ml-2 text-slate-400 text-sm">app.js</span>
+        </div>
+        <pre class="font-mono text-sm overflow-x-auto"><code id="code-display" class="text-slate-300">
+<span class="text-slate-500">// Opening a file in Node.js</span>
+<span class="text-purple-400">const</span> fs = <span class="text-yellow-400">require</span>(<span class="text-green-400">'fs'</span>);
+
+<span id="code-line" class="text-slate-300"><span class="text-purple-400">const</span> fd = fs.<span class="text-yellow-400">openSync</span>(<span class="text-green-400">'/home/user/file.txt'</span>, <span class="text-green-400">'r+'</span>);</span>
+<span class="text-slate-500">// fd is now ready for read/write operations</span>
+
+console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`File opened with descriptor: <span class="text-orange-400">${fd}</span>`</span>);</code></pre>
+      </div>
+
+      <!-- Node.js to System Call Diagram -->
+      <div class="bg-slate-800/50 rounded-xl p-4 mb-6 border border-slate-700">
+        <div class="text-xs font-bold text-slate-400 mb-3">How Node.js reaches the Kernel:</div>
+        <div class="flex items-center justify-between gap-2 text-xs overflow-x-auto pb-2">
+          <div class="flex-shrink-0 bg-green-900/50 border border-green-700 rounded px-3 py-2 text-center">
+            <div class="font-bold text-green-400">JavaScript</div>
+            <div class="text-slate-400">fs.openSync()</div>
+          </div>
+          <div class="text-slate-500">→</div>
+          <div class="flex-shrink-0 bg-yellow-900/50 border border-yellow-700 rounded px-3 py-2 text-center">
+            <div class="font-bold text-yellow-400">Node.js Bindings</div>
+            <div class="text-slate-400">node::fs::Open()</div>
+          </div>
+          <div class="text-slate-500">→</div>
+          <div class="flex-shrink-0 bg-orange-900/50 border border-orange-700 rounded px-3 py-2 text-center">
+            <div class="font-bold text-orange-400">libuv</div>
+            <div class="text-slate-400">uv_fs_open()</div>
+          </div>
+          <div class="text-slate-500">→</div>
+          <div class="flex-shrink-0 bg-red-900/50 border border-red-700 rounded px-3 py-2 text-center">
+            <div class="font-bold text-red-400">C Library</div>
+            <div class="text-slate-400">open()</div>
+          </div>
+          <div class="text-slate-500">→</div>
+          <div class="flex-shrink-0 bg-purple-900/50 border border-purple-700 rounded px-3 py-2 text-center">
+            <div class="font-bold text-purple-400">Kernel</div>
+            <div class="text-slate-400">sys_open()</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flow Visualization -->
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+
+        <!-- Step 1: User Space Call -->
+        <div id="step-1" class="step-card bg-slate-800 rounded-xl p-4 border-2 border-slate-700">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">1</span>
+            <span class="font-bold text-green-400">Node.js Call</span>
+          </div>
+          <div class="space-y-3">
+            <div class="bg-slate-900 rounded p-3 text-xs font-mono">
+              <div class="text-slate-400 mb-1">// JavaScript → Native binding</div>
+              <div>fs.<span class="tooltip-container text-yellow-400">openSync<span class="tooltip"><strong>fs.openSync()</strong> is Node.js's synchronous file open function. It blocks the event loop until the file is opened. Under the hood, it calls into C++ bindings via V8.</span></span>(<span class="text-green-400">'/home/user/file.txt'</span>,</div>
+              <div class="pl-4"><span class="tooltip-container text-purple-400">'r+'<span class="tooltip"><strong>'r+'</strong> flag opens file for reading and writing. Node.js translates this to O_RDWR. Other flags: 'r' (read), 'w' (write/create), 'a' (append), 'wx' (exclusive create).</span></span>);</div>
+            </div>
+            <div id="step-1-detail" class="text-xs text-slate-400 hidden">
+              <div class="bg-green-900/30 rounded p-2 border border-green-800">
+                V8 calls into <span class="tooltip-container text-green-400">node::fs::Open<span class="tooltip"><strong>node::fs::Open</strong> is the C++ function in Node.js that handles file operations. It uses N-API to interface between JavaScript and native code.</span></span> which invokes <span class="tooltip-container text-orange-400">libuv<span class="tooltip"><strong>libuv</strong> is the cross-platform async I/O library that Node.js uses. For sync operations, it directly calls the OS. For async, it uses thread pool.</span></span>'s uv_fs_open().
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Kernel Entry -->
+        <div id="step-2" class="step-card bg-slate-800 rounded-xl p-4 border-2 border-slate-700">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="bg-amber-600 text-white text-xs font-bold px-2 py-1 rounded">2</span>
+            <span class="font-bold text-amber-400">Kernel Entry</span>
+          </div>
+          <div class="space-y-3">
+            <div class="bg-slate-900 rounded p-3 text-xs">
+              <div class="font-bold text-slate-300 mb-2">System Call Handler</div>
+              <div class="space-y-1 text-slate-400">
+                <div>1. Save user context</div>
+                <div>2. Switch to <span class="tooltip-container text-amber-400">kernel stack<span class="tooltip">Each process has a separate <strong>kernel stack</strong> used when executing kernel code. This prevents user code from corrupting kernel data.</span></span></div>
+                <div>3. Validate syscall number</div>
+                <div>4. Dispatch to <span class="tooltip-container text-amber-400">sys_open<span class="tooltip"><strong>sys_open</strong> is the kernel function that implements the open() system call. It performs all the work of finding the file and setting up the file descriptor.</span></span>()</div>
+              </div>
+            </div>
+            <div id="step-2-detail" class="text-xs text-slate-400 hidden">
+              <div class="bg-amber-900/30 rounded p-2 border border-amber-800">
+                CPU privilege level changes from Ring 3 (user) to Ring 0 (kernel).
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: VFS Layer -->
+        <div id="step-3" class="step-card bg-slate-800 rounded-xl p-4 border-2 border-slate-700">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded">3</span>
+            <span class="font-bold text-purple-400">VFS Layer</span>
+          </div>
+          <div class="space-y-3">
+            <div class="bg-slate-900 rounded p-3 text-xs">
+              <div class="font-bold text-slate-300 mb-2"><span class="tooltip-container">Virtual File System<span class="tooltip">The <strong>VFS</strong> is an abstraction layer that provides a uniform interface for different file systems (ext4, NTFS, NFS, etc.). It allows the same open() call to work on any file system.</span></span></div>
+              <div class="space-y-1 text-slate-400">
+                <div>1. Parse path string</div>
+                <div>2. Identify <span class="tooltip-container text-purple-400">mount point<span class="tooltip">A <strong>mount point</strong> is where a file system is attached to the directory tree. The VFS determines which file system handles this path by checking mount points.</span></span></div>
+                <div>3. Route to filesystem driver</div>
+              </div>
+            </div>
+            <div id="step-3-detail" class="text-xs text-slate-400 hidden">
+              <div class="bg-purple-900/30 rounded p-2 border border-purple-800">
+                VFS translates generic operations to filesystem-specific calls (ext4_lookup, etc.)
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4: Path Resolution -->
+        <div id="step-4" class="step-card bg-slate-800 rounded-xl p-4 border-2 border-slate-700">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="bg-emerald-600 text-white text-xs font-bold px-2 py-1 rounded">4</span>
+            <span class="font-bold text-emerald-400">Path Resolution</span>
+          </div>
+          <div class="space-y-3">
+            <div class="bg-slate-900 rounded p-3 text-xs font-mono">
+              <div class="text-slate-500 mb-1">// Walking the path</div>
+              <div class="text-emerald-400">/</div>
+              <div class="text-emerald-400 pl-2">└─ home/</div>
+              <div class="text-emerald-400 pl-4">└─ user/</div>
+              <div class="text-yellow-400 pl-6">└─ file.txt</div>
+            </div>
+            <div id="step-4-detail" class="text-xs text-slate-400 hidden">
+              <div class="bg-emerald-900/30 rounded p-2 border border-emerald-800">
+                Each component is looked up in its parent's <span class="tooltip-container text-emerald-400">dentry cache<span class="tooltip">The <strong>dentry cache</strong> (directory entry cache) stores recently accessed directory entries in memory for fast lookup. Cache misses require disk reads.</span></span>.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Second Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+
+        <!-- Step 5: Permission Check -->
+        <div id="step-5" class="step-card bg-slate-800 rounded-xl p-4 border-2 border-slate-700">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="bg-rose-600 text-white text-xs font-bold px-2 py-1 rounded">5</span>
+            <span class="font-bold text-rose-400">Permission Check</span>
+          </div>
+          <div class="space-y-3">
+            <div class="bg-slate-900 rounded p-3 text-xs">
+              <div class="font-bold text-slate-300 mb-2">Access Control</div>
+              <div class="font-mono text-slate-400 mb-2">
+                <span class="tooltip-container">-rw-r--r--<span class="tooltip"><strong>File permissions:</strong> Owner can read/write, group and others can only read. Format: [type][owner rwx][group rwx][others rwx]</span></span> user user file.txt
+              </div>
+              <div class="space-y-1 text-slate-400 text-[10px]">
+                <div>Process UID: 1000 (user)</div>
+                <div>File owner UID: 1000 <span class="text-green-400">✓ Match</span></div>
+                <div>Requested: O_RDWR <span class="text-green-400">✓ Allowed</span></div>
+              </div>
+            </div>
+            <div id="step-5-detail" class="text-xs text-slate-400 hidden">
+              <div class="bg-rose-900/30 rounded p-2 border border-rose-800">
+                Also checks <span class="tooltip-container text-rose-400">SELinux/AppArmor<span class="tooltip"><strong>SELinux/AppArmor</strong> are Mandatory Access Control (MAC) systems that add additional security policies beyond traditional Unix permissions.</span></span> policies if enabled.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 6: Inode Loading -->
+        <div id="step-6" class="step-card bg-slate-800 rounded-xl p-4 border-2 border-slate-700">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="bg-cyan-600 text-white text-xs font-bold px-2 py-1 rounded">6</span>
+            <span class="font-bold text-cyan-400">Inode Loading</span>
+          </div>
+          <div class="space-y-3">
+            <div class="bg-slate-900 rounded p-3 text-xs">
+              <div class="font-bold text-slate-300 mb-2"><span class="tooltip-container">Inode<span class="tooltip">An <strong>inode</strong> (index node) is a data structure storing file metadata: size, permissions, timestamps, and pointers to data blocks. Each file has a unique inode number within its filesystem.</span></span> #48291</div>
+              <div class="space-y-1 text-[10px] font-mono text-slate-400">
+                <div>size: <span class="text-cyan-400">4096</span> bytes</div>
+                <div>blocks: <span class="text-cyan-400">[1847, 1848]</span></div>
+                <div>uid: <span class="text-cyan-400">1000</span></div>
+                <div>gid: <span class="text-cyan-400">1000</span></div>
+                <div>mode: <span class="text-cyan-400">0644</span></div>
+                <div>atime: <span class="text-cyan-400">2024-01-15</span></div>
+              </div>
+            </div>
+            <div id="step-6-detail" class="text-xs text-slate-400 hidden">
+              <div class="bg-cyan-900/30 rounded p-2 border border-cyan-800">
+                Inode loaded from disk into <span class="tooltip-container text-cyan-400">inode cache<span class="tooltip">The <strong>inode cache</strong> keeps frequently accessed inodes in memory. Multiple processes opening the same file share one cached inode.</span></span> (if not already cached).
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 7: File Structure -->
+        <div id="step-7" class="step-card bg-slate-800 rounded-xl p-4 border-2 border-slate-700">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="bg-orange-600 text-white text-xs font-bold px-2 py-1 rounded">7</span>
+            <span class="font-bold text-orange-400">File Structure</span>
+          </div>
+          <div class="space-y-3">
+            <div class="bg-slate-900 rounded p-3 text-xs">
+              <div class="font-bold text-slate-300 mb-2"><span class="tooltip-container">struct file<span class="tooltip"><strong>struct file</strong> (Open File Description) is a kernel structure created for each open() call. It tracks the current file position and access mode, and points to the inode.</span></span> (Open File Table)</div>
+              <div class="space-y-1 text-[10px] font-mono text-slate-400">
+                <div>f_pos: <span class="text-orange-400">0</span> <span class="text-slate-500">(file offset)</span></div>
+                <div>f_mode: <span class="text-orange-400">O_RDWR</span></div>
+                <div>f_flags: <span class="text-orange-400">0</span></div>
+                <div>f_op: <span class="text-orange-400">ext4_file_ops</span></div>
+                <div>f_inode: <span class="text-orange-400">→ inode #48291</span></div>
+                <div>f_count: <span class="text-orange-400">1</span></div>
+              </div>
+            </div>
+            <div id="step-7-detail" class="text-xs text-slate-400 hidden">
+              <div class="bg-orange-900/30 rounded p-2 border border-orange-800">
+                Allocated from kernel <span class="tooltip-container text-orange-400">slab allocator<span class="tooltip">The <strong>slab allocator</strong> is a memory management mechanism that pre-allocates pools of fixed-size objects (like struct file) for efficient allocation.</span></span>.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 8: FD Allocation -->
+        <div id="step-8" class="step-card bg-slate-800 rounded-xl p-4 border-2 border-slate-700">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="bg-indigo-600 text-white text-xs font-bold px-2 py-1 rounded">8</span>
+            <span class="font-bold text-indigo-400">FD Allocation</span>
+          </div>
+          <div class="space-y-3">
+            <div class="bg-slate-900 rounded p-3 text-xs">
+              <div class="font-bold text-slate-300 mb-2"><span class="tooltip-container">File Descriptor Table<span class="tooltip">Each process has its own <strong>FD table</strong> - an array of pointers to open file structures. The index into this array is the file descriptor number returned to user space.</span></span></div>
+              <div class="font-mono text-[10px]">
+                <div class="flex items-center gap-2 text-slate-500">
+                  <span class="w-4">0</span>
+                  <span>→ stdin</span>
+                </div>
+                <div class="flex items-center gap-2 text-slate-500">
+                  <span class="w-4">1</span>
+                  <span>→ stdout</span>
+                </div>
+                <div class="flex items-center gap-2 text-slate-500">
+                  <span class="w-4">2</span>
+                  <span>→ stderr</span>
+                </div>
+                <div class="flex items-center gap-2 text-indigo-400 font-bold">
+                  <span class="w-4">3</span>
+                  <span>→ struct file* <span class="text-yellow-400">(NEW!)</span></span>
+                </div>
+              </div>
+            </div>
+            <div id="step-8-detail" class="text-xs text-slate-400 hidden">
+              <div class="bg-indigo-900/30 rounded p-2 border border-indigo-800">
+                Kernel finds <span class="tooltip-container text-indigo-400">lowest available FD<span class="tooltip">The kernel always assigns the <strong>lowest available</strong> file descriptor number. This is why closing FD 0 and opening a file gives you FD 0.</span></span> (3 in this case).
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Final Result -->
+      <div id="result-card" class="bg-gradient-to-r from-green-900/50 to-emerald-900/50 rounded-xl p-6 border-2 border-green-700 hidden">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="text-3xl">✓</div>
+          <div>
+            <div class="font-bold text-xl text-green-400">File Opened Successfully</div>
+            <div class="text-slate-400 text-sm">System call complete - returning to user space</div>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-slate-900/50 rounded p-3">
+            <div class="text-xs text-slate-400 mb-1">Return Value</div>
+            <div class="font-mono text-2xl text-green-400">fd = 3</div>
+          </div>
+          <div class="bg-slate-900/50 rounded p-3">
+            <div class="text-xs text-slate-400 mb-1">File Position</div>
+            <div class="font-mono text-2xl text-green-400">offset = 0</div>
+          </div>
+          <div class="bg-slate-900/50 rounded p-3">
+            <div class="text-xs text-slate-400 mb-1">Access Mode</div>
+            <div class="font-mono text-2xl text-green-400">O_RDWR</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error Scenarios -->
+      <div id="error-scenarios" class="mt-6 hidden">
+        <h3 class="text-lg font-bold text-red-400 mb-3">Possible Error Returns</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="bg-red-900/20 border border-red-800 rounded p-3 text-sm">
+            <div class="font-mono text-red-400 font-bold">ENOENT (-2)</div>
+            <div class="text-slate-400 text-xs">File does not exist</div>
+          </div>
+          <div class="bg-red-900/20 border border-red-800 rounded p-3 text-sm">
+            <div class="font-mono text-red-400 font-bold">EACCES (-13)</div>
+            <div class="text-slate-400 text-xs">Permission denied</div>
+          </div>
+          <div class="bg-red-900/20 border border-red-800 rounded p-3 text-sm">
+            <div class="font-mono text-red-400 font-bold">EMFILE (-24)</div>
+            <div class="text-slate-400 text-xs">Too many open files</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Controls -->
+    <footer class="fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 p-4 z-50">
+      <div class="max-w-7xl mx-auto flex flex-wrap justify-center gap-3">
+        <button
+          onclick="startAnimation()"
+          id="start-btn"
+          class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition flex items-center gap-2"
+        >
+          <span>▶</span> Start Flow
+        </button>
+        <button
+          onclick="nextStep()"
+          id="next-btn"
+          class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition disabled:opacity-50"
+          disabled
+        >
+          Next Step →
+        </button>
+        <button
+          onclick="autoPlay()"
+          id="auto-btn"
+          class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold transition disabled:opacity-50"
+          disabled
+        >
+          ⏩ Auto Play
+        </button>
+        <button
+          onclick="reset()"
+          class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition"
+        >
+          ↺ Reset
+        </button>
+      </div>
+      <div class="max-w-7xl mx-auto mt-3">
+        <div class="flex items-center gap-2">
+          <div class="text-xs text-slate-400">Progress:</div>
+          <div class="flex-1 bg-slate-700 rounded-full h-2 overflow-hidden">
+            <div id="progress-bar" class="bg-blue-500 h-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+          <div id="step-indicator" class="text-xs text-slate-400">0/8</div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Spacer for fixed footer -->
+    <div class="h-32"></div>
+
+    <script>
+      let currentStep = 0;
+      const totalSteps = 8;
+      let isPlaying = false;
+
+      const stepDescriptions = [
+        "Node.js fs.openSync() calls into libuv",
+        "libuv triggers syscall, CPU enters kernel mode",
+        "VFS identifies the target filesystem",
+        "Kernel walks directory tree to find file",
+        "Checking user permissions against file",
+        "Loading file metadata into memory",
+        "Creating open file description structure",
+        "Allocating file descriptor in process table"
+      ];
+
+      function updateUI() {
+        // Update progress
+        document.getElementById('progress-bar').style.width = `${(currentStep / totalSteps) * 100}%`;
+        document.getElementById('step-indicator').textContent = `${currentStep}/${totalSteps}`;
+
+        // Update step cards
+        for (let i = 1; i <= totalSteps; i++) {
+          const card = document.getElementById(`step-${i}`);
+          const detail = document.getElementById(`step-${i}-detail`);
+
+          card.classList.remove('active', 'completed', 'pulse-glow');
+          detail?.classList.add('hidden');
+
+          if (i < currentStep) {
+            card.classList.add('completed');
+          } else if (i === currentStep) {
+            card.classList.add('active', 'pulse-glow');
+            detail?.classList.remove('hidden');
+          }
+        }
+
+        // Show result when complete
+        const resultCard = document.getElementById('result-card');
+        const errorScenarios = document.getElementById('error-scenarios');
+        if (currentStep > totalSteps) {
+          resultCard.classList.remove('hidden');
+          errorScenarios.classList.remove('hidden');
+        } else {
+          resultCard.classList.add('hidden');
+          errorScenarios.classList.add('hidden');
+        }
+
+        // Highlight code line
+        const codeLine = document.getElementById('code-line');
+        if (currentStep > 0 && currentStep <= totalSteps) {
+          codeLine.classList.add('code-highlight');
+        } else {
+          codeLine.classList.remove('code-highlight');
+        }
+      }
+
+      function startAnimation() {
+        currentStep = 1;
+        updateUI();
+        document.getElementById('next-btn').disabled = false;
+        document.getElementById('auto-btn').disabled = false;
+        document.getElementById('start-btn').disabled = true;
+      }
+
+      function nextStep() {
+        if (currentStep <= totalSteps) {
+          currentStep++;
+          updateUI();
+
+          if (currentStep > totalSteps) {
+            document.getElementById('next-btn').disabled = true;
+            document.getElementById('auto-btn').disabled = true;
+          }
+        }
+      }
+
+      function autoPlay() {
+        if (isPlaying) return;
+        isPlaying = true;
+        document.getElementById('auto-btn').textContent = '⏸ Playing...';
+
+        const interval = setInterval(() => {
+          if (currentStep > totalSteps) {
+            clearInterval(interval);
+            isPlaying = false;
+            document.getElementById('auto-btn').textContent = '⏩ Auto Play';
+            return;
+          }
+          nextStep();
+        }, 1500);
+      }
+
+      function reset() {
+        currentStep = 0;
+        isPlaying = false;
+        updateUI();
+        document.getElementById('start-btn').disabled = false;
+        document.getElementById('next-btn').disabled = true;
+        document.getElementById('auto-btn').disabled = true;
+        document.getElementById('auto-btn').textContent = '⏩ Auto Play';
+      }
+
+      // Tooltip positioning
+      document.querySelectorAll('.tooltip-container').forEach(container => {
+        const tooltip = container.querySelector('.tooltip');
+        if (tooltip) {
+          container.addEventListener('mouseenter', () => {
+            const rect = container.getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
+
+            // Position below by default
+            let top = rect.bottom + 8;
+            let left = rect.left;
+
+            // Adjust if too close to right edge
+            if (left + 240 > window.innerWidth) {
+              left = window.innerWidth - 250;
+            }
+
+            // Adjust if too close to bottom
+            if (top + tooltipRect.height > window.innerHeight - 100) {
+              top = rect.top - tooltipRect.height - 8;
+            }
+
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+          });
+        }
+      });
+
+      // Initialize
+      updateUI();
+    </script>
+  </body>
+</html>
