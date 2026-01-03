@@ -265,7 +265,7 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
 
           <div class="code-block bg-slate-900 rounded p-2 md:p-3 text-xs font-mono mb-3">
             <div class="text-slate-500">// Cross-platform I/O</div>
-            <div><span class="text-blue-400">return</span> <span class="text-cyan-400">open</span>(path, O_RDWR, mode);</div>
+            <div><span class="text-blue-400">return</span> <span class="text-cyan-400">open</span>(path, <span class="tooltip-trigger text-orange-400" data-tooltip="<strong>O_RDWR</strong> (value: 2)<br>Open for reading and writing.<br><br>Other flags:<br>O_RDONLY (0) = read only<br>O_WRONLY (1) = write only<br>O_CREAT = create if missing<br>O_TRUNC = truncate to zero">O_RDWR</span>, mode);</div>
           </div>
 
           <div class="bg-orange-900/30 rounded p-2 md:p-3 border border-orange-800 text-xs md:text-sm">
@@ -478,7 +478,7 @@ console.<span class="text-yellow-400">log</span>(<span class="text-green-400">`f
           <div class="code-block bg-slate-900 rounded p-2 md:p-3 text-xs font-mono mb-3">
             <div class="text-slate-500">// <span class="tooltip-trigger text-cyan-400" data-tooltip="<strong>struct file</strong> = Open File Description. Created per open() call. Tracks position and mode.">Open File Description</span></div>
             <div>f_pos: <span class="text-orange-400">0</span> <span class="text-slate-500">(offset)</span></div>
-            <div>f_flags: <span class="text-orange-400">O_RDWR</span></div>
+            <div>f_flags: <span class="tooltip-trigger text-orange-400" data-tooltip="<strong>O_RDWR</strong> (value: 2)<br>Open for reading and writing.<br><br>Stored in struct file to track how the file was opened. Used by read/write syscalls to check permissions.">O_RDWR</span></div>
             <div>f_inode: <span class="text-purple-400">→ #48291</span></div>
             <div>f_count: <span class="text-orange-400">1</span></div>
           </div>
