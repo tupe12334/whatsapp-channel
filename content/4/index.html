@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OS File Descriptors Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .active-path {
+        stroke-dasharray: 10;
+        animation: dash 1s linear infinite;
+      }
+      @keyframes dash {
+        to {
+          stroke-dashoffset: -20;
+        }
+      }
+      .node-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .packet {
+        position: absolute;
+        padding: 2px 6px;
+        font-family: monospace;
+        font-size: 10px;
+        font-weight: bold;
+        color: white;
+        border-radius: 4px;
+        z-index: 50;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      .process-blocked {
+        background-color: #fef3c7 !important; /* Amber-100 */
+        border-color: #d97706 !important; /* Amber-600 */
+        transform: scale(0.98);
+        opacity: 0.8;
+      }
+      .buffer-bar {
+        transition: width 0.5s ease-out;
+      }
+      /* Custom scrollbar for fd table */
+      .scroller::-webkit-scrollbar {
+        width: 4px;
+      }
+      .scroller::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 2px;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-100 font-sans text-slate-900 h-screen overflow-hidden flex flex-col"
+  >
+    <!-- Top Bar -->
+    <div
+      class="bg-white border-b border-slate-200 px-6 py-4 flex-none shadow-sm z-20"
+    >
+      <div
+        class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4"
+      >
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <span class="bg-slate-800 text-white px-2 py-1 rounded text-sm"
+              >PID: 1042</span
+            >
+            File Descriptor Lifecycle
+          </h1>
+          <p class="text-slate-500 text-xs mt-1">
+            Visualizing Blocking I/O, Buffers, and Kernel Structures
+          </p>
+        </div>
+
+        <div
+          id="status-display"
+          class="bg-slate-900 text-green-400 font-mono text-xs px-4 py-2 rounded-lg w-full md:w-96 h-10 flex items-center truncate shadow-inner"
+        >
+          System ready. Waiting for syscall...
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 overflow-auto p-6 relative">
+      <div
+        class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 h-full"
+      >
+        <!-- Column 1: Process Space -->
+        <div class="flex flex-col gap-4">
+          <div
+            class="text-sm font-bold text-slate-400 uppercase tracking-wider text-center"
+          >
+            User Space (Process)
+          </div>
+
+          <div
+            id="proc-card"
+            class="node-card bg-white p-5 rounded-xl border-2 border-slate-300 shadow-lg flex-1 flex flex-col relative overflow-hidden"
+          >
+            <div
+              class="flex justify-between items-center border-b border-slate-100 pb-3 mb-3"
+            >
+              <div class="font-bold text-slate-700">Process Memory</div>
+              <div
+                id="proc-state"
+                class="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-1 rounded-full border border-green-200"
+              >
+                RUNNING
+              </div>
+            </div>
+
+            <!-- Code Simulation -->
+            <div
+              class="bg-slate-900 rounded p-3 mb-4 font-mono text-[10px] text-slate-300 shadow-inner h-24 overflow-y-auto scroller"
+              id="code-log"
+            >
+              <div class="text-slate-500">// Execution Log</div>
+            </div>
+
+            <div class="text-xs font-bold text-slate-500 mb-2">
+              File Descriptor Table
+            </div>
+            <div
+              id="fd-table"
+              class="space-y-2 overflow-y-auto max-h-[300px] scroller pr-1 flex-1"
+            >
+              <!-- Standard FDs -->
+              <div
+                class="flex items-center p-2 bg-slate-50 rounded border border-slate-200 opacity-60"
+              >
+                <span class="w-6 font-mono font-bold text-slate-400">0</span>
+                <span class="text-[10px] text-slate-500">stdin</span>
+              </div>
+              <div
+                class="flex items-center p-2 bg-slate-50 rounded border border-slate-200 opacity-60"
+              >
+                <span class="w-6 font-mono font-bold text-slate-400">1</span>
+                <span class="text-[10px] text-slate-500">stdout</span>
+              </div>
+              <div
+                class="flex items-center p-2 bg-slate-50 rounded border border-slate-200 opacity-60"
+              >
+                <span class="w-6 font-mono font-bold text-slate-400">2</span>
+                <span class="text-[10px] text-slate-500">stderr</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 2: Kernel Space -->
+        <div class="flex flex-col gap-4">
+          <div
+            class="text-sm font-bold text-slate-400 uppercase tracking-wider text-center"
+          >
+            Kernel Space
+          </div>
+
+          <div
+            class="node-card bg-slate-50 p-5 rounded-xl border-2 border-slate-300 shadow-inner flex-1 flex flex-col"
+          >
+            <div
+              class="text-center font-bold text-slate-700 border-b border-slate-200 pb-3 mb-3"
+            >
+              Open File Table
+            </div>
+            <div
+              id="file-table"
+              class="space-y-4 overflow-y-auto flex-1 scroller pr-1"
+            >
+              <div
+                id="empty-kernel-msg"
+                class="text-center text-slate-400 text-xs italic mt-10"
+              >
+                No open file descriptions
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 3: Hardware/Network -->
+        <div class="flex flex-col gap-4">
+          <div
+            class="text-sm font-bold text-slate-400 uppercase tracking-wider text-center"
+          >
+            Hardware / Network
+          </div>
+
+          <!-- Disk -->
+          <div
+            id="disk-zone"
+            class="bg-white p-4 rounded-xl border-2 border-slate-200 shadow-sm transition-colors min-h-[150px]"
+          >
+            <div
+              class="flex items-center gap-2 mb-3 border-b border-slate-100 pb-2"
+            >
+              <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+              <div class="font-bold text-slate-700 text-sm">
+                Disk Controller
+              </div>
+            </div>
+            <div id="inode-container" class="space-y-2">
+              <div
+                class="p-2 bg-emerald-50 border border-emerald-100 rounded text-[10px] text-emerald-800 font-mono"
+              >
+                inode: 8821 (file.txt)
+                <br />size: 4096B
+              </div>
+            </div>
+          </div>
+
+          <!-- Network -->
+          <div
+            id="net-zone"
+            class="bg-white p-4 rounded-xl border-2 border-slate-200 shadow-sm transition-colors min-h-[200px] flex-1"
+          >
+            <div
+              class="flex items-center gap-2 mb-3 border-b border-slate-100 pb-2"
+            >
+              <div class="w-3 h-3 rounded-full bg-orange-500"></div>
+              <div class="font-bold text-slate-700 text-sm">
+                Network Interface (NIC)
+              </div>
+            </div>
+            <div
+              class="relative h-32 bg-slate-100 rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center"
+            >
+              <div
+                class="absolute inset-0 grid grid-cols-6 grid-rows-4 gap-1 opacity-10 p-1"
+              >
+                <!-- Visual pattern -->
+                <div class="bg-slate-400 rounded-sm"></div>
+                <div class="bg-slate-400 rounded-sm"></div>
+                <div class="bg-slate-400 rounded-sm"></div>
+                <div class="bg-slate-400 rounded-sm"></div>
+                <div class="bg-slate-400 rounded-sm"></div>
+                <div class="bg-slate-400 rounded-sm"></div>
+              </div>
+              <div id="cloud-icon" class="text-4xl">☁️</div>
+            </div>
+            <div
+              id="net-logs"
+              class="mt-2 text-[9px] font-mono text-slate-400 h-12 overflow-hidden"
+            >
+              > Link up<br />
+              > 192.168.1.15
+            </div>
+          </div>
+        </div>
+
+        <svg
+          id="lines-svg"
+          class="absolute inset-0 w-full h-full pointer-events-none z-10 overflow-visible"
+        ></svg>
+      </div>
+    </div>
+
+    <!-- Controls Footer -->
+    <div
+      class="bg-white border-t border-slate-200 p-4 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]"
+    >
+      <div class="max-w-4xl mx-auto flex flex-wrap justify-center gap-3">
+        <div class="flex gap-1 bg-slate-100 p-1 rounded-lg">
+          <button
+            onclick="simOpen()"
+            class="px-4 py-2 bg-white border border-slate-200 text-blue-600 rounded shadow-sm hover:bg-blue-50 transition text-xs font-bold uppercase tracking-wide"
+          >
+            open()
+          </button>
+          <button
+            onclick="simSocket()"
+            class="px-4 py-2 bg-white border border-slate-200 text-orange-600 rounded shadow-sm hover:bg-orange-50 transition text-xs font-bold uppercase tracking-wide"
+          >
+            socket()
+          </button>
+          <button
+            onclick="simDup()"
+            class="px-4 py-2 bg-white border border-slate-200 text-purple-600 rounded shadow-sm hover:bg-purple-50 transition text-xs font-bold uppercase tracking-wide"
+          >
+            dup()
+          </button>
+        </div>
+
+        <div class="w-px bg-slate-300 mx-2"></div>
+
+        <div class="flex gap-1 bg-slate-100 p-1 rounded-lg">
+          <button
+            onclick="simConnect()"
+            class="px-4 py-2 bg-white border border-slate-200 text-amber-600 rounded shadow-sm hover:bg-amber-50 transition text-xs font-bold uppercase tracking-wide"
+          >
+            connect()
+          </button>
+          <button
+            onclick="simSend()"
+            class="px-4 py-2 bg-white border border-slate-200 text-rose-600 rounded shadow-sm hover:bg-rose-50 transition text-xs font-bold uppercase tracking-wide"
+          >
+            write()
+          </button>
+          <button
+            onclick="simRead()"
+            class="px-4 py-2 bg-white border border-slate-200 text-emerald-600 rounded shadow-sm hover:bg-emerald-50 transition text-xs font-bold uppercase tracking-wide"
+          >
+            read()
+          </button>
+        </div>
+
+        <div class="w-px bg-slate-300 mx-2"></div>
+
+        <button
+          onclick="simClose()"
+          class="px-4 py-2 bg-slate-200 text-slate-600 rounded hover:bg-slate-300 transition text-xs font-bold uppercase tracking-wide"
+        >
+          close()
+        </button>
+        <button
+          onclick="location.reload()"
+          class="px-4 py-2 bg-red-100 text-red-600 rounded hover:bg-red-200 transition text-xs font-bold uppercase tracking-wide"
+        >
+          Reset
+        </button>
+      </div>
+    </div>
+
+    <script>
+      // --- State ---
+      let fds = []; // { id, kernelId }
+      let kernelEntries = []; // { id, type: 'file'|'socket', state: 'CLOSED'|'OPEN'|'ESTABLISHED', buffer: 0, offset: 0, content: [] }
+      let nextFd = 3;
+      let nextKernelId = 1;
+      let connections = [];
+
+      // --- DOM Elements ---
+      const uiLog = document.getElementById("code-log");
+      const uiStatus = document.getElementById("status-display");
+      const fdTable = document.getElementById("fd-table");
+      const fileTable = document.getElementById("file-table");
+      const svg = document.getElementById("lines-svg");
+      const procCard = document.getElementById("proc-card");
+      const procState = document.getElementById("proc-state");
+
+      // --- Core Functions ---
+
+      function log(msg, isCode = false) {
+        if (isCode) {
+          const line = document.createElement("div");
+          line.textContent = `> ${msg}`;
+          uiLog.appendChild(line);
+          uiLog.scrollTop = uiLog.scrollHeight;
+        }
+        uiStatus.textContent = isCode ? `Executing: ${msg}` : msg;
+        uiStatus.className = isCode
+          ? "bg-slate-900 text-blue-400 font-mono text-xs px-4 py-2 rounded-lg w-full md:w-96 h-10 flex items-center truncate shadow-inner"
+          : "bg-slate-800 text-white font-mono text-xs px-4 py-2 rounded-lg w-full md:w-96 h-10 flex items-center truncate shadow-inner";
+      }
+
+      function setProcessState(state) {
+        procState.textContent = state;
+        if (state === "BLOCKED") {
+          procState.className =
+            "text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-1 rounded-full border border-amber-200 animate-pulse";
+          procCard.classList.add("process-blocked");
+          log("Process is BLOCKED waiting for I/O...");
+        } else {
+          procState.className =
+            "text-[10px] font-bold bg-green-100 text-green-700 px-2 py-1 rounded-full border border-green-200";
+          procCard.classList.remove("process-blocked");
+        }
+      }
+
+      function updateLines() {
+        svg.innerHTML = "";
+        fds.forEach((fd) => {
+          const entry = kernelEntries.find((k) => k.id === fd.kernelId);
+          if (!entry) return;
+
+          const startEl = document.getElementById(`fd-row-${fd.id}`);
+          const endEl = document.getElementById(`kernel-row-${fd.kernelId}`);
+          const targetEl =
+            entry.type === "file"
+              ? document.getElementById("disk-zone")
+              : document.getElementById("net-zone");
+
+          if (startEl && endEl)
+            drawCurve(
+              startEl,
+              endEl,
+              entry.type === "file" ? "#3b82f6" : "#f97316"
+            );
+          if (endEl && targetEl)
+            drawCurve(
+              endEl,
+              targetEl,
+              entry.type === "file" ? "#10b981" : "#f97316",
+              true
+            );
+        });
+      }
+
+      function drawCurve(el1, el2, color, isDashed = false) {
+        const rect1 = el1.getBoundingClientRect();
+        const rect2 = el2.getBoundingClientRect();
+        const container = svg.getBoundingClientRect();
+
+        const x1 = rect1.right - container.left;
+        const y1 = rect1.top + rect1.height / 2 - container.top;
+        const x2 = rect2.left - container.left;
+        const y2 = rect2.top + rect2.height / 2 - container.top;
+
+        const path = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "path"
+        );
+        const d = `M ${x1} ${y1} C ${x1 + 50} ${y1}, ${
+          x2 - 50
+        } ${y2}, ${x2} ${y2}`;
+
+        path.setAttribute("d", d);
+        path.setAttribute("stroke", color);
+        path.setAttribute("stroke-width", "2");
+        path.setAttribute("fill", "none");
+        path.setAttribute("opacity", "0.6");
+        if (isDashed) path.setAttribute("stroke-dasharray", "4");
+        svg.appendChild(path);
+      }
+
+      function animatePacket(text, fromElId, toElId, color, onComplete) {
+        const startEl = document.getElementById(fromElId);
+        const endEl = document.getElementById(toElId);
+        if (!startEl || !endEl) return;
+
+        const start = startEl.getBoundingClientRect();
+        const end = endEl.getBoundingClientRect();
+
+        const pkt = document.createElement("div");
+        pkt.className = "packet";
+        pkt.innerText = text;
+        pkt.style.backgroundColor = color;
+        pkt.style.left = start.left + "px";
+        pkt.style.top = start.top + "px";
+        document.body.appendChild(pkt);
+
+        const anim = pkt.animate(
+          [
+            {
+              left: start.right + "px",
+              top: start.top + 10 + "px",
+              opacity: 1,
+            },
+            {
+              left: end.left - 20 + "px",
+              top: end.top + 10 + "px",
+              opacity: 1,
+            },
+          ],
+          { duration: 1000, easing: "ease-in-out" }
+        );
+
+        anim.onfinish = () => {
+          pkt.remove();
+          if (onComplete) onComplete();
+        };
+      }
+
+      // --- System Calls ---
+
+      function simOpen() {
+        log(`int fd = open("file.txt", O_RDWR);`, true);
+        createFd("file");
+      }
+
+      function simSocket() {
+        log(`int fd = socket(AF_INET, SOCK_STREAM);`, true);
+        createFd("socket");
+      }
+
+      function createFd(type) {
+        const kid = nextKernelId++;
+        const fid = nextFd++;
+
+        document.getElementById("empty-kernel-msg").style.display = "none";
+
+        // Kernel Entry
+        const kEntry = document.createElement("div");
+        kEntry.id = `kernel-row-${kid}`;
+        kEntry.className = `p-3 rounded border text-xs relative ${
+          type === "file"
+            ? "bg-blue-50 border-blue-200"
+            : "bg-orange-50 border-orange-200"
+        }`;
+        kEntry.innerHTML = `
+                <div class="flex justify-between mb-1">
+                    <span class="font-bold ${
+                      type === "file" ? "text-blue-700" : "text-orange-700"
+                    }">Entry #${kid} (${type})</span>
+                    <span id="state-${kid}" class="text-[9px] uppercase font-bold text-slate-400">OPEN</span>
+                </div>
+                <div class="bg-white border border-slate-200 h-4 rounded-sm overflow-hidden relative">
+                     <div id="buffer-${kid}" class="buffer-bar h-full ${
+          type === "file" ? "bg-blue-300" : "bg-orange-300"
+        } w-0"></div>
+                     <div class="absolute inset-0 flex items-center justify-center text-[8px] text-slate-500 font-mono tracking-tighter">
+                        INTERNAL BUFFER
+                     </div>
+                </div>
+                <div class="mt-1 flex justify-between text-[9px] text-slate-500">
+                    <span id="ptr-${kid}">${
+          type === "file" ? "Offset: 0" : "Queue: 0"
+        }</span>
+                    <span>Refs: <span id="ref-${kid}">1</span></span>
+                </div>
+            `;
+        fileTable.appendChild(kEntry);
+
+        kernelEntries.push({
+          id: kid,
+          type,
+          state: "OPEN",
+          buffer: 0,
+          refs: 1,
+        });
+
+        // User FD
+        const fdRow = document.createElement("div");
+        fdRow.id = `fd-row-${fid}`;
+        fdRow.className = `flex items-center p-2 rounded border-2 border-l-4 transition-all ${
+          type === "file"
+            ? "bg-blue-50 border-blue-200 border-l-blue-500"
+            : "bg-orange-50 border-orange-200 border-l-orange-500"
+        }`;
+        fdRow.innerHTML = `
+                <span class="w-6 font-mono font-bold text-slate-700">${fid}</span>
+                <span class="text-[10px] font-mono text-slate-500">-> Kernel Entry #${kid}</span>
+            `;
+        fdTable.appendChild(fdRow);
+
+        fds.push({ id: fid, kernelId: kid });
+
+        setTimeout(updateLines, 50);
+      }
+
+      function simDup() {
+        if (fds.length === 0) return log("No open FDs to dup!");
+        const target = fds[fds.length - 1]; // dup the last one
+        const newFid = nextFd++;
+
+        log(`int new_fd = dup(${target.id});`, true);
+
+        // Update ref count visually
+        const kEntry = kernelEntries.find((k) => k.id === target.kernelId);
+        kEntry.refs++;
+        document.getElementById(`ref-${kEntry.id}`).innerText = kEntry.refs;
+
+        // Add new FD row
+        const fdRow = document.createElement("div");
+        fdRow.id = `fd-row-${newFid}`;
+        fdRow.className = document.getElementById(
+          `fd-row-${target.id}`
+        ).className; // Copy style
+        fdRow.innerHTML = `
+                <span class="w-6 font-mono font-bold text-slate-700">${newFid}</span>
+                <span class="text-[10px] font-mono text-slate-500">-> Kernel Entry #${kEntry.id}</span>
+            `;
+        fdTable.appendChild(fdRow);
+        fds.push({ id: newFid, kernelId: kEntry.id });
+
+        updateLines();
+        log(
+          `FD ${newFid} created. It shares Offset/State with FD ${target.id}.`
+        );
+      }
+
+      function simConnect() {
+        const sock = fds.find((f) => {
+          const k = kernelEntries.find((e) => e.id === f.kernelId);
+          return k.type === "socket" && k.state === "OPEN";
+        });
+
+        if (!sock) return log("No unconnected socket found.");
+
+        const kEntry = kernelEntries.find((k) => k.id === sock.kernelId);
+        log(`connect(${sock.id}, "192.168.1.15", ...);`, true);
+
+        animatePacket("SYN", `fd-row-${sock.id}`, "net-zone", "#f59e0b", () => {
+          setTimeout(() => {
+            animatePacket(
+              "SYN-ACK",
+              "net-zone",
+              `kernel-row-${kEntry.id}`,
+              "#10b981",
+              () => {
+                kEntry.state = "ESTABLISHED";
+                document.getElementById(`state-${kEntry.id}`).innerText =
+                  "ESTABLISHED";
+                document.getElementById(`state-${kEntry.id}`).className =
+                  "text-[9px] uppercase font-bold text-green-600";
+                document
+                  .getElementById(`kernel-row-${kEntry.id}`)
+                  .classList.add("ring-1", "ring-green-400");
+                log("Connection Established (TCP Handshake complete)");
+              }
+            );
+          }, 500);
+        });
+      }
+
+      function simSend() {
+        const target = fds[fds.length - 1];
+        if (!target) return;
+        const kEntry = kernelEntries.find((k) => k.id === target.kernelId);
+
+        if (kEntry.type === "socket" && kEntry.state !== "ESTABLISHED")
+          return log("Socket not connected!");
+
+        log(`write(${target.id}, "GET /", 5);`, true);
+
+        const dest = kEntry.type === "file" ? "disk-zone" : "net-zone";
+        const color = kEntry.type === "file" ? "#3b82f6" : "#f43f5e";
+        const content = kEntry.type === "file" ? "DATA" : "GET /";
+
+        animatePacket(
+          content,
+          `fd-row-${target.id}`,
+          `kernel-row-${kEntry.id}`,
+          color,
+          () => {
+            // Flash buffer
+            document.getElementById(`buffer-${kEntry.id}`).style.width = "100%";
+            setTimeout(() => {
+              document.getElementById(`buffer-${kEntry.id}`).style.width = "0%";
+              animatePacket(
+                content,
+                `kernel-row-${kEntry.id}`,
+                dest,
+                color,
+                () => {
+                  if (kEntry.type === "file") {
+                    log("Data written to Disk Buffer");
+                  } else {
+                    log("Packet sent to Network");
+                    kEntry.awaitingResponse = true;
+                  }
+                }
+              );
+            }, 300);
+          }
+        );
+      }
+
+      function simRead() {
+        const target = fds[fds.length - 1];
+        if (!target) return log("No FD available");
+        const kEntry = kernelEntries.find((k) => k.id === target.kernelId);
+
+        log(`read(${target.id}, buf, 1024);`, true);
+        setProcessState("BLOCKED");
+
+        // Simulation Logic
+        if (kEntry.type === "file") {
+          // Disk read is fast but still async conceptualy
+          setTimeout(() => {
+            animatePacket(
+              "DATA",
+              "disk-zone",
+              `kernel-row-${kEntry.id}`,
+              "#3b82f6",
+              () => {
+                fillBufferAndWake(kEntry, target);
+              }
+            );
+          }, 800);
+        } else {
+          // Socket read
+          if (!kEntry.awaitingResponse) {
+            log("Socket empty. Blocked waiting for network...");
+            // Simulate network delay
+            setTimeout(() => {
+              animatePacket(
+                "HTML",
+                "net-zone",
+                `kernel-row-${kEntry.id}`,
+                "#10b981",
+                () => {
+                  fillBufferAndWake(kEntry, target);
+                }
+              );
+            }, 2000);
+          } else {
+            animatePacket(
+              "HTML",
+              "net-zone",
+              `kernel-row-${kEntry.id}`,
+              "#10b981",
+              () => {
+                fillBufferAndWake(kEntry, target);
+              }
+            );
+          }
+        }
+      }
+
+      function fillBufferAndWake(kEntry, targetFd) {
+        const bufBar = document.getElementById(`buffer-${kEntry.id}`);
+        bufBar.style.width = "80%"; // Fill kernel buffer
+
+        setTimeout(() => {
+          // Copy to user space
+          animatePacket(
+            "COPY",
+            `kernel-row-${kEntry.id}`,
+            `fd-row-${targetFd.id}`,
+            "#8b5cf6",
+            () => {
+              bufBar.style.width = "0%"; // Empty kernel buffer
+              setProcessState("RUNNING");
+              log("Data copied to User Memory. Process Wakes Up.");
+              kEntry.awaitingResponse = false;
+            }
+          );
+        }, 600);
+      }
+
+      function simClose() {
+        if (fds.length === 0) return;
+        const target = fds.pop();
+        const kEntry = kernelEntries.find((k) => k.id === target.kernelId);
+
+        log(`close(${target.id});`, true);
+
+        // Remove UI
+        document.getElementById(`fd-row-${target.id}`).remove();
+
+        // Decrement ref
+        kEntry.refs--;
+        document.getElementById(`ref-${kEntry.id}`).innerText = kEntry.refs;
+
+        if (kEntry.refs === 0) {
+          // Close kernel entry
+          log(`Ref count 0. Kernel destroys Entry #${kEntry.id}.`);
+          const kRow = document.getElementById(`kernel-row-${kEntry.id}`);
+          kRow.style.opacity = "0.5";
+          kRow.style.transform = "scale(0.9)";
+          setTimeout(() => kRow.remove(), 500);
+          kernelEntries = kernelEntries.filter((k) => k.id !== kEntry.id);
+        } else {
+          log(`Ref count > 0. Kernel keeps Entry #${kEntry.id}.`);
+        }
+
+        updateLines();
+        if (kernelEntries.length === 0)
+          document.getElementById("empty-kernel-msg").style.display = "block";
+      }
+
+      // Init
+      window.addEventListener("resize", updateLines);
+    </script>
+  </body>
+</html>
